@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON AIR CANVAS — Futuristic Air Drawing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00D9FF;
+            --neon-magenta: #FF006E;
+            --neon-yellow: #FFBE0B;
+            --neon-purple: #A500FF;
+            --neon-green: #39FF14;
+            --dark-bg: #0a0e27;
+            --glass-bg: rgba(15, 20, 50, 0.7);
+            --glass-border: rgba(0, 217, 255, 0.2);
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: var(--dark-bg);
+            cursor: none;
+        }
+
+        /* Main Canvas */
+        canvas#drawingCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3a 50%, #0f1a2e 100%);
+        }
+
+        /* Animated Background Grid */
+        #backgroundContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #animatedGrid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(0deg, transparent 24%, rgba(0, 217, 255, 0.05) 25%, rgba(0, 217, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 217, 255, 0.05) 75%, rgba(0, 217, 255, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 217, 255, 0.05) 25%, rgba(0, 217, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 217, 255, 0.05) 75%, rgba(0, 217, 255, 0.05) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            animation: gridShift 20s linear infinite;
+        }
+
+        @keyframes gridShift {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Custom Cursor - Glowing Orb */
+        #cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--neon-cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            box-shadow: 0 0 10px var(--neon-cyan), inset 0 0 10px var(--neon-cyan);
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        #cursor.active {
+            box-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-magenta), inset 0 0 10px var(--neon-cyan);
+            animation: cursorPulse 0.8s infinite;
+        }
+
+        @keyframes cursorPulse {
+            0%, 100% { 
+                box-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-magenta), inset 0 0 10px var(--neon-cyan);
+            }
+            50% { 
+                box-shadow: 0 0 30px var(--neon-cyan), 0 0 60px var(--neon-magenta), inset 0 0 15px var(--neon-cyan);
+            }
+        }
+
+        /* Dashboard Panel */
+        #dashboard {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            min-width: 320px;
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 217, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: dashboardGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes dashboardGlow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 217, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+            50% { box-shadow: 0 8px 40px rgba(0, 217, 255, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.15); }
+        }
+
+        .dashboard-title {
+            font-size: 14px;
+            letter-spacing: 3px;
+            color: var(--neon-cyan);
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .dashboard-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 3px solid var(--neon-cyan);
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .dashboard-item:hover {
+            background: rgba(0, 217, 255, 0.1);
+            border-left-color: var(--neon-magenta);
+            box-shadow: inset 0 0 10px rgba(255, 0, 110, 0.1);
+        }
+
+        .dashboard-label {
+            font-size: 11px;
+            color: rgba(0, 217, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .dashboard-value {
+            font-size: 16px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px var(--neon-cyan);
+            font-weight: bold;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: var(--neon-yellow);
+            box-shadow: 0 0 8px var(--neon-yellow);
+        }
+
+        .status-indicator.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 12px var(--neon-green);
+            animation: statusPulse 1s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { box-shadow: 0 0 12px var(--neon-green); }
+            50% { box-shadow: 0 0 20px var(--neon-green); }
+        }
+
+        /* Control Panel */
+        #controlPanel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            box-shadow: 0 8px 32px rgba(0, 217, 255, 0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            animation: controlGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes controlGlow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 217, 255, 0.1); }
+            50% { box-shadow: 0 8px 40px rgba(0, 217, 255, 0.15); }
+        }
+
+        .control-btn {
+            padding: 10px 15px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 8px;
+            color: var(--neon-cyan);
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 217, 255, 0.2);
+            box-shadow: 0 0 20px var(--neon-cyan), 0 0 10px var(--neon-magenta);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 0 30px var(--neon-magenta), 0 0 15px var(--neon-cyan);
+        }
+
+        .control-btn.active {
+            background: rgba(255, 0, 110, 0.2);
+            border-color: var(--neon-magenta);
+            box-shadow: 0 0 15px var(--neon-magenta);
+            color: var(--neon-magenta);
+        }
+
+        /* Brush Style Buttons */
+        .brush-selector {
+            display: flex;
+            gap: 10px;
+        }
+
+        .brush-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-cyan);
+            background: rgba(0, 217, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+        }
+
+        .brush-btn:hover {
+            box-shadow: 0 0 15px var(--neon-cyan);
+            transform: scale(1.1);
+        }
+
+        .brush-btn.selected {
+            background: rgba(255, 0, 110, 0.3);
+            border-color: var(--neon-magenta);
+            box-shadow: 0 0 20px var(--neon-magenta);
+            transform: scale(1.15);
+        }
+
+        /* Floating Particles Background */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle::before {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, var(--particle-color) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        /* Info Text */
+        #infoText {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--glass-bg);
+            border: 2px solid var(--neon-cyan);
+            border-radius: 10px;
+            padding: 15px 20px;
+            color: var(--neon-cyan);
+            font-size: 12px;
+            letter-spacing: 1px;
+            max-width: 280px;
+            z-index: 999;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.2);
+        }
+
+        .info-key {
+            color: var(--neon-magenta);
+            font-weight: bold;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        /* Loading Animation */
+        .loading-bar {
+            width: 100%;
+            height: 3px;
+            background: rgba(0, 217, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .loading-bar::after {
+            content: '';
+            display: block;
+            height: 100%;
+            width: 30%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
+            animation: loading 1.5s infinite;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(400%); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div id="backgroundContainer">
+        <div id="animatedGrid"></div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div id="cursor"></div>
+
+    <!-- Main Canvas -->
+    <canvas id="drawingCanvas"></canvas>
+
+    <!-- Dashboard Panel -->
+    <div id="dashboard">
+        <div class="dashboard-title">◆ NEON AIR CANVAS ◆</div>
+        
+        <div class="dashboard-item">
+            <div class="dashboard-label">Status</div>
+            <div class="dashboard-value">
+                <span class="status-indicator"></span>
+                <span id="statusText">IDLE</span>
+            </div>
+        </div>
+
+        <div class="dashboard-item">
+            <div class="dashboard-label">Brush</div>
+            <div class="dashboard-value" id="brushName">LASER NEON</div>
+        </div>
+
+        <div class="dashboard-item">
+            <div class="dashboard-label">Strokes</div>
+            <div class="dashboard-value" id="strokeCount">0</div>
+        </div>
+
+        <div class="dashboard-item">
+            <div class="dashboard-label">Magic Mode</div>
+            <div class="dashboard-value">
+                <span class="status-indicator" id="magicIndicator"></span>
+                <span id="magicStatus">OFF</span>
+            </div>
+        </div>
+
+        <div class="loading-bar"></div>
+    </div>
+
+    <!-- Control Panel -->
+    <div id="controlPanel">
+        <div class="brush-selector">
+            <button class="brush-btn selected" data-brush="0" title="Neon Laser">⚡</button>
+            <button class="brush-btn" data-brush="1" title="Fire Brush">🔥</button>
+            <button class="brush-btn" data-brush="2" title="Smoke Fog">💨</button>
+            <button class="brush-btn" data-brush="3" title="Galaxy Sparkle">✨</button>
+        </div>
+
+        <button class="control-btn" id="magicBtn" title="Toggle Magic Mode (M)">🎭 MAGIC</button>
+        <button class="control-btn" id="undoBtn" title="Undo Last Stroke (Z)">↶ UNDO</button>
+        <button class="control-btn" id="clearBtn" title="Clear Canvas (C)">✕ CLEAR</button>
+    </div>
+
+    <!-- Info Text -->
+    <div id="infoText">
+        <div><span class="info-key">SPACE</span> to draw</div>
+        <div><span class="info-key">1-4</span> brush styles</div>
+        <div><span class="info-key">Z</span> undo | <span class="info-key">C</span> clear</div>
+        <div><span class="info-key">M</span> magic mode</div>
+    </div>
+
+    <script>
+        // ============================================================
+        // NEON AIR CANVAS - Main Application
+        // ============================================================
+
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // ============================================================
+        // STATE MANAGEMENT
+        // ============================================================
+
+        const state = {
+            isDrawing: false,
+            brushStyle: 0, // 0: laser, 1: fire, 2: smoke, 3: galaxy
+            magicMode: false,
+            strokeCount: 0,
+            history: [], // Store strokes for undo
+            currentStroke: null,
+        };
+
+        const brushNames = ['LASER NEON', 'FIRE BRUSH', 'SMOKE FOG', 'GALAXY'];
+
+        // ============================================================
+        // PARTICLE SYSTEM
+        // ============================================================
+
+        const particles = [];
+
+        class Particle {
+            constructor(x, y, vx, vy, color, size, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.maxLife = life;
+                this.life = life;
+                this.decay = life / 100;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2; // gravity
+                this.life -= this.decay;
+                this.size *= 0.98;
+            }
+
+            draw() {
+                const opacity = (this.life / this.maxLife);
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            isAlive() {
+                return this.life > 0;
+            }
+        }
+
+        // ============================================================
+        // BRUSH STYLES
+        // ============================================================
+
+        const brushes = {
+            // Neon Laser Brush
+            0: (points) => {
+                if (points.length < 2) return;
+                
+                ctx.strokeStyle = '#00D9FF';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.globalAlpha = 0.8;
+                
+                // Main neon line
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+                
+                // Glow effect
+                ctx.shadowColor = '#00D9FF';
+                ctx.shadowBlur = 20;
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = 6;
+                ctx.stroke();
+                
+                ctx.globalAlpha = 0.2;
+                ctx.lineWidth = 15;
+                ctx.stroke();
+                
+                // Add cyan particles along the path
+                for (let i = 0; i < points.length; i += 3) {
+                    const p = points[i];
+                    particles.push(new Particle(
+                        p.x + (Math.random() - 0.5) * 20,
+                        p.y + (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 2,
+                        (Math.random() - 0.5) * 2,
+                        '#00D9FF',
+                        3,
+                        20
+                    ));
+                }
+            },
+
+            // Fire Brush
+            1: (points) => {
+                if (points.length < 2) return;
+                
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Draw main fire trail with gradient
+                for (let i = 0; i < points.length - 1; i++) {
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    
+                    // Flickering effect
+                    const flickerOffset = Math.sin(Date.now() * 0.01 + i) * 3;
+                    
+                    // Red/Orange/Yellow gradient
+                    ctx.strokeStyle = '#FF4500';
+                    ctx.lineWidth = 4 + flickerOffset;
+                    ctx.globalAlpha = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                    
+                    // Yellow inner glow
+                    ctx.strokeStyle = '#FFBE0B';
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 0.6;
+                    ctx.stroke();
+                    
+                    // Fire particles
+                    const spreadX = (Math.random() - 0.5) * 4;
+                    const spreadY = -Math.random() * 2;
+                    
+                    particles.push(new Particle(
+                        p2.x + spreadX,
+                        p2.y + spreadY,
+                        spreadX * 0.5,
+                        spreadY * 1.5,
+                        '#FF4500',
+                        4,
+                        15
+                    ));
+                    
+                    particles.push(new Particle(
+                        p2.x + spreadX,
+                        p2.y + spreadY,
+                        spreadX * 0.3,
+                        spreadY * 1.2,
+                        '#FFBE0B',
+                        2,
+                        10
+                    ));
+                }
+            },
+
+            // Smoke/Fog Brush
+            2: (points) => {
+                if (points.length < 2) return;
+                
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Main line - subtle
+                ctx.strokeStyle = '#A0AEC0';
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.5;
+                
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+                
+                // Smoke particles - spread outward
+                for (let i = 0; i < points.length; i += 2) {
+                    const p = points[i];
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 2;
+                    
+                    for (let j = 0; j < 3; j++) {
+                        particles.push(new Particle(
+                            p.x + (Math.random() - 0.5) * 10,
+                            p.y + (Math.random() - 0.5) * 10,
+                            Math.cos(angle) * speed,
+                            Math.sin(angle) * speed,
+                            'rgba(160, 174, 192, 0.3)',
+                            5 + Math.random() * 5,
+                            25
+                        ));
+                    }
+                }
+            },
+
+            // Galaxy/Sparkle Brush
+            3: (points) => {
+                if (points.length < 2) return;
+                
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // Purple main line
+                ctx.strokeStyle = '#A500FF';
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.7;
+                
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+                
+                // Glow
+                ctx.shadowColor = '#A500FF';
+                ctx.shadowBlur = 15;
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = 8;
+                ctx.stroke();
+                
+                // Sparkle particles
+                for (let i = 0; i < points.length; i++) {
+                    const p = points[i];
+                    const colors = ['#FFBE0B', '#39FF14', '#00D9FF', '#A500FF'];
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    particles.push(new Particle(
+                        p.x + (Math.random() - 0.5) * 30,
+                        p.y + (Math.random() - 0.5) * 30,
+                        (Math.random() - 0.5) * 3,
+                        (Math.random() - 0.5) * 3,
+                        color,
+                        2,
+                        20
+                    ));
+                }
+            }
+        };
+
+        // ============================================================
+        // DRAWING SYSTEM
+        // ============================================================
+
+        const strokeHistory = [];
+        const Stroke = {
+            points: [],
+            brushStyle: 0,
+            createdAt: Date.now(),
+            opacity: 1,
+            isAnimating: false,
+        };
+
+        function startStroke(x, y) {
+            state.isDrawing = true;
+            state.currentStroke = {
+                points: [{ x, y }],
+                brushStyle: state.brushStyle,
+                createdAt: Date.now(),
+                opacity: 1,
+            };
+            updateStatus(true);
+        }
+
+        function addToStroke(x, y) {
+            if (!state.isDrawing || !state.currentStroke) return;
+            
+            // Smooth interpolation between points
+            const lastPoint = state.currentStroke.points[state.currentStroke.points.length - 1];
+            if (!lastPoint) return;
+            
+            const distance = Math.hypot(x - lastPoint.x, y - lastPoint.y);
+            if (distance > 2) { // Only add if moved enough
+                state.currentStroke.points.push({ x, y });
+            }
+        }
+
+        function endStroke() {
+            if (!state.isDrawing || !state.currentStroke) return;
+            
+            state.isDrawing = false;
+            if (state.currentStroke.points.length > 1) {
+                strokeHistory.push(JSON.parse(JSON.stringify(state.currentStroke)));
+                state.strokeCount++;
+                document.getElementById('strokeCount').textContent = state.strokeCount;
+            }
+            state.currentStroke = null;
+            updateStatus(false);
+        }
+
+        // ============================================================
+        // ANIMATION & RENDERING
+        // ============================================================
+
+        function drawStroke(stroke) {
+            ctx.save();
+            ctx.globalAlpha = stroke.opacity;
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
+            
+            if (brushes[stroke.brushStyle]) {
+                brushes[stroke.brushStyle](stroke.points);
+            }
+            ctx.restore();
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                
+                if (!particles[i].isAlive()) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function animateMagicMode() {
+            if (!state.magicMode) return;
+            
+            const now = Date.now();
+            strokeHistory.forEach(stroke => {
+                // Slow fade animation
+                const age = now - stroke.createdAt;
+                const fadeStart = 3000; // Start fading after 3 seconds
+                const fadeDuration = 5000; // Fade over 5 seconds
+                
+                if (age > fadeStart) {
+                    stroke.opacity = Math.max(0, 1 - (age - fadeStart) / fadeDuration);
+                }
+                
+                // Shimmer effect
+                stroke.shimmer = Math.sin(age * 0.005) * 0.2 + 0.8;
+            });
+        }
+
+        function animate() {
+            // Clear with semi-transparent overlay for trail effect
+            ctx.save();
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Draw all strokes
+            strokeHistory.forEach(stroke => {
+                drawStroke(stroke);
+            });
+
+            // Draw current stroke
+            if (state.currentStroke) {
+                drawStroke(state.currentStroke);
+            }
+
+            // Update and draw particles
+            updateParticles();
+
+            // Update magic mode
+            animateMagicMode();
+
+            // Screen glow effect when drawing
+            if (state.isDrawing) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 217, 255, 0.02)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================================
+        // CONTROLS
+        // ============================================================
+
+        let spacePressed = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                spacePressed = true;
+                startStroke(lastMouse.x, lastMouse.y);
+                e.preventDefault();
+            } else if (e.key === 'z' || e.key === 'Z') {
+                undo();
+            } else if (e.key === 'c' || e.key === 'C') {
+                clearCanvas();
+            } else if (e.key === 'm' || e.key === 'M') {
+                toggleMagicMode();
+            } else if (e.key >= '1' && e.key <= '4') {
+                const brushIndex = parseInt(e.key) - 1;
+                selectBrush(brushIndex);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                spacePressed = false;
+                endStroke();
+            }
+        });
+
+        // Mouse tracking
+        const lastMouse = { x: 0, y: 0 };
+
+        document.addEventListener('mousemove', (e) => {
+            lastMouse.x = e.clientX;
+            lastMouse.y = e.clientY;
+            
+            // Update cursor position
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            cursor.style.display = 'block';
+            
+            if (state.isDrawing) {
+                addToStroke(e.clientX, e.clientY);
+            }
+        });
+
+        document.addEventListener('mouseleave', () => {
+            cursor.style.display = 'none';
+            if (state.isDrawing) {
+                endStroke();
+            }
+        });
+
+        // Button controls
+        document.getElementById('undoBtn').addEventListener('click', undo);
+        document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+        document.getElementById('magicBtn').addEventListener('click', toggleMagicMode);
+
+        document.querySelectorAll('.brush-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                selectBrush(parseInt(btn.dataset.brush));
+            });
+        });
+
+        // ============================================================
+        // ACTION FUNCTIONS
+        // ============================================================
+
+        function undo() {
+            if (strokeHistory.length > 0) {
+                strokeHistory.pop();
+                state.strokeCount = Math.max(0, state.strokeCount - 1);
+                document.getElementById('strokeCount').textContent = state.strokeCount;
+            }
+        }
+
+        function clearCanvas() {
+            strokeHistory.length = 0;
+            state.strokeCount = 0;
+            document.getElementById('strokeCount').textContent = '0';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function toggleMagicMode() {
+            state.magicMode = !state.magicMode;
+            const magicBtn = document.getElementById('magicBtn');
+            const magicStatus = document.getElementById('magicStatus');
+            const magicIndicator = document.getElementById('magicIndicator');
+            
+            if (state.magicMode) {
+                magicBtn.classList.add('active');
+                magicStatus.textContent = 'ON';
+                magicIndicator.classList.add('active');
+                
+                // Reset animation timers
+                const now = Date.now();
+                strokeHistory.forEach(stroke => {
+                    stroke.createdAt = now;
+                });
+            } else {
+                magicBtn.classList.remove('active');
+                magicStatus.textContent = 'OFF';
+                magicIndicator.classList.remove('active');
+                
+                // Reset opacity
+                strokeHistory.forEach(stroke => {
+                    stroke.opacity = 1;
+                });
+            }
+        }
+
+        function selectBrush(index) {
+            if (index < 0 || index > 3) return;
+            
+            state.brushStyle = index;
+            document.getElementById('brushName').textContent = brushNames[index];
+            
+            // Update button states
+            document.querySelectorAll('.brush-btn').forEach((btn, i) => {
+                btn.classList.toggle('selected', i === index);
+            });
+        }
+
+        function updateStatus(isActive) {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.querySelector('.status-indicator');
+            
+            if (isActive) {
+                statusText.textContent = 'ACTIVE';
+                statusIndicator.classList.add('active');
+                cursor.classList.add('active');
+            } else {
+                statusText.textContent = 'IDLE';
+                statusIndicator.classList.remove('active');
+                cursor.classList.remove('active');
+            }
+        }
+
+        // ============================================================
+        // FLOATING BACKGROUND PARTICLES
+        // ============================================================
+
+        function createFloatingParticles() {
+            const container = document.getElementById('backgroundContainer');
+            const colors = ['--neon-cyan', '--neon-magenta', '--neon-yellow', '--neon-purple'];
+            
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                
+                const size = Math.random() * 40 + 20;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                
+                const color = getComputedStyle(document.documentElement).getPropertyValue(colors[Math.floor(Math.random() * colors.length)]);
+                particle.style.setProperty('--particle-color', color);
+                
+                const duration = Math.random() * 20 + 20;
+                particle.style.animation = `float ${duration}s infinite ease-in-out`;
+                
+                container.appendChild(particle);
+            }
+        }
+
+        // Add CSS animation for floating particles
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes float {
+                0%, 100% { transform: translateY(0) translateX(0); opacity: 0.1; }
+                25% { transform: translateY(-30px) translateX(30px); opacity: 0.3; }
+                50% { transform: translateY(-60px) translateX(0); opacity: 0.1; }
+                75% { transform: translateY(-30px) translateX(-30px); opacity: 0.3; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ============================================================
+        // INITIALIZATION
+        // ============================================================
+
+        createFloatingParticles();
+        animate();
+        selectBrush(0);
+
+        console.log('🎨 NEON AIR CANVAS initialized successfully!');
+        console.log('Press SPACE to draw, use 1-4 for brushes, Z to undo, C to clear, M for magic mode');
+    </script>
+</body>
+</html>
